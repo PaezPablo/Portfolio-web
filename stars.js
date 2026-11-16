@@ -1,90 +1,111 @@
+'use strict';
 
-const canvas = document.getElementById('starsCanvas');
-const ctx = canvas.getContext('2d');
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('starsCanvas');
+  const ctx = canvas ? canvas.getContext('2d') : null;
 
-let stars = [];
-const numStars = 150;
+  if (canvas && ctx) {
+    const stars = [];
+    const STAR_COUNT = 150;
+    let animationId;
+    let lastTime = 0;
 
-const setup = () => {
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * window.devicePixelRatio;
+      canvas.height = window.innerHeight * window.devicePixelRatio;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    stars = [];
-
-    for (let i = 0; i < numStars; i++) {
+      stars.length = 0;
+      for (let i = 0; i < STAR_COUNT; i++) {
         stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-
-            size: Math.random() * 2,
-            speed: Math.random() * 0.2,
-        })
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          size: Math.random() * 1.8 + 0.3,
+          speed: Math.random() * 0.35 + 0.08,
+          color: Math.random() > 0.88 ? '#97ce4c' : '#ffffff',
+          alpha: Math.random() * 0.65 + 0.25
+        });
+      }
     }
-};
 
-const draw = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    stars.forEach(star => {
+    function drawStars(timestamp) {
+      const delta = lastTime ? Math.min((timestamp - lastTime) / 16.67, 2) : 1;
+      lastTime = timestamp;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      for (const star of stars) {
+        ctx.globalAlpha = star.alpha;
+        ctx.fillStyle = star.color;
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-
-        ctx.fillStyle = Math.random() > 0.98 ? '#97ce4c' : '#ffffff';
         ctx.fill();
 
-        star.y += star.speed;
-        if (star.y > canvas.height) {
-            star.y = 0;
-            star.x = Math.random() * canvas.width; 
+        star.y += star.speed * delta;
+        if (star.y > window.innerHeight + 3) {
+          star.y = -3;
+          star.x = Math.random() * window.innerWidth;
         }
-    });
-    requestAnimationFrame(draw);
-}
-window.addEventListener('resize', setup);
+      }
 
-const textElement = document.getElementById('typewriter');
-const name = 'Pablo Páez';
-let index = 0;
-
-const typeWriter = () => {
-    if (index < name.length) {
-        textElement.textContent += name.charAt(index);
-        index++;
-        setTimeout(typeWriter, 150); 
+      ctx.globalAlpha = 1;
+      animationId = requestAnimationFrame(drawStars);
     }
-}
 
-window.onload = () => {
-    setup();
-    draw();
-    typeWriter();
-}
+    resizeCanvas();
+    animationId = requestAnimationFrame(drawStars);
 
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(animationId);
+      lastTime = 0;
+      resizeCanvas();
+      animationId = requestAnimationFrame(drawStars);
+    });
+  }
 
-const portal = document.querySelector('.portal');
+  // Efecto de escritura
+  const typewriter = document.getElementById('typewriter');
+  if (typewriter) {
+    const text = 'Pablo Páez';
+    let index = 0;
 
-const dimensiones = [
-    "https://paezpablo.github.io/Proyectos-JS/01-Tinder-Swipe/",
-    "https://paezpablo.github.io/Proyectos-JS/07-BlackJack/"
-];
+    function type() {
+      if (index < text.length) {
+        typewriter.textContent += text.charAt(index);
+        index++;
+        window.setTimeout(type, 150);
+      }
+    }
 
-if (portal) {
-    portal.style.cursor = 'pointer';
+    type();
+  }
 
-    portal.addEventListener('click', () => {
-        portal.style.transform = 'scale(1.5) rotate(180deg)';
-        portal.style.opacity = '0';
-        portal.style.filter = 'brightness(2)';
+  // Portal interactivo
+  const portal = document.querySelector('.portal');
+  const destinations = [
+    'https://paezpablo.github.io/Proyectos-JS/01-Tinder-Swipe/',
+    'https://paezpablo.github.io/Proyectos-JS/07-BlackJack/'
+  ];
 
-        const randomProject = dimensiones[Math.floor(Math.random() * dimensiones.length)];
+  if (portal) {
+    const activatePortal = () => {
+      if (portal.classList.contains('portal-active')) return;
+      portal.classList.add('portal-active');
 
-        setTimeout(() => {
-            window.open(randomProject, '_blank');
+      window.setTimeout(() => {
+        const destination = destinations[Math.floor(Math.random() * destinations.length)];
+        window.open(destination, '_blank', 'noopener,noreferrer');
+        portal.classList.remove('portal-active');
+      }, 400);
+    };
 
-            portal.style.transform = 'scale(1) rotate(0deg)';
-            portal.style.opacity = '1';
-            portal.style.filter = 'brightness(1)';
-        },400)
-    })
-}
+    portal.addEventListener('click', activatePortal);
+    portal.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activatePortal();
+      }
+    });
+  }
+});
